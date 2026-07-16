@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Claude - Multi-Provider Chat</title>
+    <!-- Google Fonts - Outfit and Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    
+    <!-- Highlight.js for Code Highlighting -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark-dimmed.min.css">
+    
+    <!-- Custom Style Sheet -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-brand">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="brand-icon"><path d="M12 2a10 10 0 1 0 10 10H12V2z"/><path d="M12 2a10 10 0 1 1-10 10h10V2z"/></svg>
+                    <span>Claude</span>
+                </div>
+                <button class="new-chat-btn" id="new-chat-btn" title="New Chat (Ctrl+K)">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                    <span>New chat</span>
+                </button>
+            </div>
+            
+            <div class="sidebar-search">
+                <div class="search-box">
+                    <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    <input type="text" id="search-input" placeholder="Search conversations..." autocomplete="off">
+                </div>
+            </div>
+
+            <!-- Conversations List -->
+            <div class="conversations-list-container" id="conversations-list-container">
+                <div class="conversations-group">
+                    <div class="conversations-list" id="conversations-list">
+                        <!-- Filled dynamically by JavaScript -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sidebar Footer -->
+            <div class="sidebar-footer">
+                <button class="theme-toggle" id="theme-toggle" title="Toggle Theme">
+                    <svg class="sun-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+                    <svg class="moon-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+                    <span id="theme-text">Dark mode</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Panel -->
+        <main class="main-panel" id="main-panel">
+            <!-- Top Bar -->
+            <header class="top-bar">
+                <div class="top-bar-left">
+                    <button class="icon-btn sidebar-toggle-btn" id="sidebar-toggle" title="Toggle Sidebar">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+                    </button>
+                </div>
+                
+                <!-- Model Custom Dropdown -->
+                <div class="model-select-wrapper">
+                    <div class="custom-dropdown" id="model-dropdown">
+                        <button class="dropdown-trigger" id="dropdown-trigger">
+                            <span class="provider-badge" id="selected-provider-badge">OpenAI</span>
+                            <span class="model-name" id="selected-model-name">GPT-4o</span>
+                            <svg class="dropdown-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                        </button>
+                        <div class="dropdown-menu" id="dropdown-menu">
+                            <!-- Populated dynamically via /api/models -->
+                        </div>
+                    </div>
+                    
+                    <!-- Inline Custom Model Input for OpenRouter -->
+                    <div class="custom-model-input-container hidden" id="custom-model-container">
+                        <input type="text" id="custom-model-input" placeholder="e.g. anthropic/claude-3-haiku" title="Enter any valid OpenRouter model string">
+                        <span class="input-check-icon" title="Custom model active">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                        </span>
+                    </div>
+                </div>
+                
+                <div class="top-bar-right">
+                    <!-- Actions like clearing or exporting if needed -->
+                    <button class="clear-chat-btn" id="clear-chat-btn" title="Clear thread messages">
+                        Clear
+                    </button>
+                </div>
+            </header>
+
+            <!-- Message Thread Area -->
+            <section class="messages-container" id="messages-container">
+                <!-- Empty State -->
+                <div class="empty-state" id="empty-state">
+                    <div class="empty-state-content">
+                        <h1 class="greeting">How can Claude help you today?</h1>
+                        <p class="subtitle">Select a model and choose a quick prompt to start, or type your own question.</p>
+                        
+                        <div class="suggestions-grid">
+                            <div class="suggestion-card" onclick="fillInput('Explain Quantum Computing to a ten-year-old with analogies.')">
+                                <div class="suggestion-title">Explain quantum computing</div>
+                                <div class="suggestion-text">Use clear analogies for beginners</div>
+                            </div>
+                            <div class="suggestion-card" onclick="fillInput('Write a Python decorator that measures and prints the execution time of a function.')">
+                                <div class="suggestion-title">Write a Python decorator</div>
+                                <div class="suggestion-text">To measure function execution time</div>
+                            </div>
+                            <div class="suggestion-card" onclick="fillInput('Help me draft a professional email to request budget approval for a team-building event.')">
+                                <div class="suggestion-title">Draft a budget email</div>
+                                <div class="suggestion-text">Requesting team-building funds</div>
+                            </div>
+                            <div class="suggestion-card" onclick="fillInput('Compare the key architectural differences between REST APIs and gRPC.')">
+                                <div class="suggestion-title">Compare REST and gRPC</div>
+                                <div class="suggestion-text">Highlight architectural differences</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Chat Thread -->
+                <div class="chat-thread" id="chat-thread">
+                    <!-- Populated dynamically -->
+                </div>
+            </section>
+
+            <!-- Input Form Area -->
+            <footer class="input-panel">
+                <div class="input-container-outer">
+                    <!-- Attached File Banner -->
+                    <div class="attached-files-container hidden" id="attached-files-container">
+                        <div class="attached-file-chip" id="attached-file-chip">
+                            <svg class="file-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+                            <span class="file-name" id="attached-file-name">filename.txt</span>
+                            <button class="remove-file-btn" id="remove-file-btn" title="Remove attachment">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="input-container-inner">
+                        <!-- Hidden inputs for model select -->
+                        <input type="hidden" id="selected-model-id" value="gpt-4o">
+                        
+                        <!-- File Upload Input (Hidden) -->
+                        <input type="file" id="file-input" class="hidden" accept=".txt,.js,.py,.html,.css,.json,.md,.csv">
+                        
+                        <!-- Attach File Button -->
+                        <button class="input-action-btn attach-btn" id="attach-btn" title="Attach text file (.txt, .py, .js, .md...)">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
+                        </button>
+                        
+                        <!-- Auto-resizing Textarea -->
+                        <textarea id="chat-input" rows="1" placeholder="Send a message..." autofocus></textarea>
+                        
+                        <!-- Send / Stop Button -->
+                        <button class="send-btn" id="send-btn" disabled title="Send message">
+                            <svg class="send-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                            <svg class="stop-icon hidden" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect></svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="input-info">
+                    <span id="model-indicator-footer">OpenAI - GPT-4o</span> &bull; Ctrl+Enter or Enter to send.
+                </div>
+            </footer>
+        </main>
+    </div>
+
+    <!-- Marked.js (Markdown Renderer) -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    
+    <!-- Highlight.js (Code Highlighting) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <!-- Highlight.js Languages (Auto-loaded) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/css.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/xml.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/sql.min.js"></script>
+
+    <!-- App JavaScript -->
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
